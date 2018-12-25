@@ -21,15 +21,18 @@ unsigned int indices[] = {
 
 const char* vertexShaderSource =
 "#version 330 core                                    \n"
-"layout (location = 0) in vec3 aPos;                  \n"
+"layout (location = 0) in vec3 aPos;                  \n"   
+"out vec4 vertexColor;                                \n"  //声明一个4维向量输出，vertexShader必定输出一个4维向量gl_Position，此外可以自定义其他输出
 "void main(){                                         \n"
-"    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);}\n";
+"    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0); \n"
+"    vertexColor = vec4(1.0, 0.0, 0.0, 1.0);         }\n";
 
 const char* fragmentShaderSource =
 "#version 330 core                                    \n"
 "out vec4 FragColor;                                  \n"
+"in vec4 vertexColor;                                 \n"  //声明一个4维向量输入，这个输入和vertexShader中的输出类型名称一致，并把该输入作为fragShader的输出颜色
 "void main(){                                         \n"
-"    FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);}       \n";
+"    FragColor = vertexColor;}                        \n";
 
 int main() {
 
@@ -60,7 +63,7 @@ int main() {
 
 	//使用线框模式,第一个参数表示我们打算将其应用到所有的三角形的正面和背面，第二个参数告诉我们用线来绘制
 	//之后的绘制调用会一直以线框模式绘制三角形，直到我们用glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)将其设置回默认模式
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
@@ -116,7 +119,6 @@ int main() {
 
 	
 	glfwTerminate();
-	system("pause");
 	return 0;
 }
 
