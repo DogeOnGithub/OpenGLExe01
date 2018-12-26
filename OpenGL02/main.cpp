@@ -7,6 +7,8 @@
 
 int openGLTest01();
 
+int openGLTest02();
+
 void processInput(GLFWwindow* window);
 
 float vertices[] = {
@@ -14,6 +16,14 @@ float vertices[] = {
 	 0.5f, -0.5f, 0.0f,
 	 0.0f,  0.5f, 0.0f,
 	 0.8f, 0.8f, 0.0f
+};
+
+//这里的数组，新增了顶点外，顶点的RGB颜色
+float vertices2[] = {
+	-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
+	 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+	 0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
+	 0.8f, 0.8f, 0.0f, 1.0f, 1.0f, 1.0f
 };
 
 unsigned int indices[] = {
@@ -43,10 +53,26 @@ uniform是全局的(Global)
 "void main(){                                         \n"
 "    FragColor = customColor;}                        \n";
 
+const char* vertexShaderSource2 =
+"#version 330 core                                    \n"
+"layout (location = 0) in vec3 aPos;                  \n"
+"layout (location = 1) in vec3 aColor;                \n"   //从1槽中读取3维向量
+"out vec4 vertexColor;                                \n"
+"void main(){                                         \n"
+"    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0); \n"
+"    vertexColor = vec4(aColor.x, aColor.y, aColor.z, 1.0);         }\n";  //将3维向量转为4维向量，也就是将RGB转为RGBA
+
+const char* fragmentShaderSource2 =
+"#version 330 core                                    \n"
+"out vec4 FragColor;                                  \n"
+"in vec4 vertexColor;                                 \n"
+"void main(){                                         \n"
+"    FragColor = vertexColor;}                        \n";
+
 int main()
 {
 
-	return openGLTest01();
+	return openGLTest02();
 
 }
 
@@ -131,6 +157,98 @@ int openGLTest01()
 		float redValue = sin(timeVal) / 2.0f + 0.5f;   //将redValue的值固定在0~1
 		int colorUniformLocation = glGetUniformLocation(shaderProgram, "customColor");   //获取uniform的位置
 		glUniform4f(colorUniformLocation, redValue, 0.0f, 0.0f, 1.0f);   //设置指定位置的Uniform的值
+
+		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+
+	glfwTerminate();
+	return 0;
+}
+
+//在顶点数组中存储RGB值，并将RGB值作为fragShader的输入
+int openGLTest02()
+{
+	glfwInit();
+
+	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL02", NULL, NULL);
+
+	if (window == NULL)
+	{
+		std::cout << "error create" << std::endl;
+		glfwTerminate();
+		system("pause");
+		return -1;
+	}
+
+	glfwMakeContextCurrent(window);
+
+	glewExperimental = GL_TRUE;
+
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "glew init fail" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+
+	glViewport(0, 0, 800, 600);
+
+	//使用线框模式,第一个参数表示我们打算将其应用到所有的三角形的正面和背面，第二个参数告诉我们用线来绘制
+	//之后的绘制调用会一直以线框模式绘制三角形，直到我们用glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)将其设置回默认模式
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	unsigned int VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+
+	//创建索引缓冲对象
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	unsigned int vertexShader;
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource2, NULL);
+	glCompileShader(vertexShader);
+
+	unsigned int fragmentShader;
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource2, NULL);
+	glCompileShader(fragmentShader);
+
+	unsigned int shaderProgram;
+	shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+
+	glUseProgram(shaderProgram);
+	glBindVertexArray(VAO);
+
+	while (!glfwWindowShouldClose(window))
+	{
+		processInput(window);
+
+		glClearColor(0, 0.2f, 0.2f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
