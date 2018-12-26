@@ -5,12 +5,14 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+int openGLTest01();
+
 void processInput(GLFWwindow* window);
 
 float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f,
+	-0.5f, -0.5f, 0.0f,
+	 0.5f, -0.5f, 0.0f,
+	 0.0f,  0.5f, 0.0f,
 	 0.8f, 0.8f, 0.0f
 };
 
@@ -21,7 +23,7 @@ unsigned int indices[] = {
 
 const char* vertexShaderSource =
 "#version 330 core                                    \n"
-"layout (location = 0) in vec3 aPos;                  \n"   
+"layout (location = 0) in vec3 aPos;                  \n"
 "out vec4 vertexColor;                                \n"  //声明一个4维向量输出，vertexShader必定输出一个4维向量gl_Position，此外可以自定义其他输出
 "void main(){                                         \n"
 "    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0); \n"
@@ -31,11 +33,26 @@ const char* fragmentShaderSource =
 "#version 330 core                                    \n"
 "out vec4 FragColor;                                  \n"
 "in vec4 vertexColor;                                 \n"  //声明一个4维向量输入，这个输入和vertexShader中的输出类型名称一致，并把该输入作为fragShader的输出颜色
+/*
+Uniform是一种从CPU中的应用向GPU中的着色器发送数据的方式，但uniform和顶点属性有些不同
+uniform是全局的(Global)
+全局意味着uniform变量必须在每个着色器程序对象中都是独一无二的，而且它可以被着色器程序的任意着色器在任意阶段访问
+无论你把uniform值设置成什么，uniform会一直保存它们的数据，直到它们被重置或更新
+*/
+"uniform vec4 customColor;                            \n"
 "void main(){                                         \n"
-"    FragColor = vertexColor;}                        \n";
+"    FragColor = customColor;}                        \n";
 
-int main() {
+int main()
+{
 
+	return openGLTest01();
+
+}
+
+//使用输出输入以及使用Uniform改变片段着色器输出的颜色
+int openGLTest01()
+{
 	glfwInit();
 
 	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL02", NULL, NULL);
@@ -110,6 +127,11 @@ int main() {
 		glClearColor(0, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		int timeVal = glfwGetTime();  //获取当前CPU时间
+		float redValue = sin(timeVal) / 2.0f + 0.5f;   //将redValue的值固定在0~1
+		int colorUniformLocation = glGetUniformLocation(shaderProgram, "customColor");   //获取uniform的位置
+		glUniform4f(colorUniformLocation, redValue, 0.0f, 0.0f, 1.0f);   //设置指定位置的Uniform的值
+
 		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -117,7 +139,7 @@ int main() {
 		glfwPollEvents();
 	}
 
-	
+
 	glfwTerminate();
 	return 0;
 }
