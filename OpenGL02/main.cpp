@@ -50,7 +50,7 @@ float verticesTexture[] = {
 		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
 };
 
-float indicesTexture[] = {
+unsigned int indicesTexture[] = {
 	0, 1, 3,
 	1, 2, 3
 };
@@ -406,11 +406,11 @@ int openGLTest04()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesTexture), indicesTexture, GL_STATIC_DRAW);
 
 	//创建Shader
-	CustomShader* shader = new CustomShader("vertx.txt", "frag.txt");
+	CustomShader* shader = new CustomShader("vertexTexture.txt", "fragmentTexture.txt");
 
 	//创建Texture
-	/*unsigned int texture;
-	loadTexture(&texture);*/
+	unsigned int texture;
+	loadTexture(&texture);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
@@ -431,7 +431,7 @@ int openGLTest04()
 
 		glBindVertexArray(VAO);
 		shader->use();
-		//glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
 
 		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
