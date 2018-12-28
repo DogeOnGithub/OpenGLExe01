@@ -18,9 +18,11 @@ int openGLTest03();
 
 int openGLTest04();
 
+int openGLTest05();
+
 void processInput(GLFWwindow* window);
 
-void loadTexture(unsigned int* texture);
+void loadTexture(unsigned int* texture, const char* path, GLint interFormat, GLenum format);
 
 float vertices[] = {
 	-0.5f, -0.5f, 0.0f,
@@ -43,7 +45,7 @@ unsigned int indices[] = {
 };
 
 float verticesTexture[] = {
-	//     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
+	//     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标，也就是uv值，也可以叫st值，实际上就是从纹理的左下角作为原点x和y轴的0到1之间的float值 -
 		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
 		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
 		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
@@ -96,7 +98,7 @@ const char* fragmentShaderSource2 =
 int main()
 {
 
-	return openGLTest04();
+	return openGLTest05();
 
 }
 
@@ -410,7 +412,7 @@ int openGLTest04()
 
 	//创建Texture
 	unsigned int texture;
-	loadTexture(&texture);
+	loadTexture(&texture, "container.jpg", GL_RGB, GL_RGB);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
@@ -418,6 +420,7 @@ int openGLTest04()
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
+	//应用纹理，这里使用顶点属性定义uv值的取样
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(2);
 
@@ -431,7 +434,105 @@ int openGLTest04()
 
 		glBindVertexArray(VAO);
 		shader->use();
+
+		//绑定纹理，第一个参数指定绑定的纹理的类型，第二个参数是纹理的id，会自动把纹理赋值给片段着色器的采样器
 		glBindTexture(GL_TEXTURE_2D, texture);
+
+		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	glfwTerminate();
+	return 0;
+}
+
+//多个纹理单元
+int openGLTest05()
+{
+	glfwInit();
+
+	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL02", NULL, NULL);
+
+	if (window == NULL)
+	{
+		std::cout << "error create" << std::endl;
+		glfwTerminate();
+		system("pause");
+		return -1;
+	}
+
+	glfwMakeContextCurrent(window);
+
+	glewExperimental = GL_TRUE;
+
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "glew init fail" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+
+	glViewport(0, 0, 800, 600);
+
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	unsigned int VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verticesTexture), verticesTexture, GL_STATIC_DRAW);
+
+	//创建索引缓冲对象
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesTexture), indicesTexture, GL_STATIC_DRAW);
+
+	//创建Shader
+	CustomShader* shader = new CustomShader("vertexTexture.txt", "fragmentTexture.txt");
+
+	//创建Texture
+	unsigned int texture;
+	loadTexture(&texture, "container.jpg", GL_RGB, GL_RGB);
+
+	unsigned int textureFace;
+	loadTexture(&textureFace, "awesomeface.png", GL_RGBA, GL_RGBA);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	//应用纹理，这里使用顶点属性定义uv值的取样
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindVertexArray(VAO);
+	shader->use();
+
+	//激活第0个纹理单元，默认激活第0个
+	glActiveTexture(GL_TEXTURE0);
+	//绑定纹理，第一个参数指定绑定的纹理的类型，第二个参数是纹理的id，会自动把纹理赋值给片段着色器的采样器
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, textureFace);
+
+	//这个是设置sampler采样器的纹理单元，也就是可以将一个指定的Texture Unit绑定到指定的Uniform采样器
+	glUniform1i(glGetUniformLocation(shader->ProgramID, "textureWood"), 0);  //手动设置，将纹理单元0绑定到名为textureWood的采样器
+	shader->setInt("textureFace", 1);  //使用自定义的Shader类中的函数设置
+
+	while (!glfwWindowShouldClose(window))
+	{
+		processInput(window);
+
+		glClearColor(0, 0.2f, 0.2f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -452,21 +553,42 @@ void processInput(GLFWwindow * window)
 	}
 }
 
-void loadTexture(unsigned int* texture)
+//加载纹理
+void loadTexture(unsigned int* texture, const char* path, GLint interFormat, GLenum format)
 {
+	//生成纹理（实际上应该是生成一个纹理的缓冲区，这个缓冲区还没有图像数据），需要使用一个unsigned int类型的id来存储
 	glGenTextures(1, texture);
+	//绑定生成的纹理缓冲到2D纹理，绑定之后，后续的纹理指令都将会对当前绑定纹理起作用
 	glBindTexture(GL_TEXTURE_2D, *texture);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  //设置s的也就是x轴的纹理环绕方式
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  //设置t的也就是y轴的纹理环绕方式
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);  //设置缩小的纹理过滤方式
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  //设置放大的纹理过滤方式
+
+	//一般情况下，图片的y轴的0在图片的顶部，但是OpenGL的y轴的0坐标是在图片的底部的，stb_image库带有函数可以在加载时反转y轴
+	stbi_set_flip_vertically_on_load(true);
 
 	int width, height, nrChannels;
-	unsigned char* textureData = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+	//使用stbi_load函数加载图片，第1个参数是图片的路径，2、3、4参数则是宽高和颜色通道的个数，该方法会返回图片的对应的值
+	unsigned char* textureData = stbi_load(path, &width, &height, &nrChannels, 0);
 	if (textureData)
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+		//上面绑定过纹理之后，现在可以对纹理进行操作
+		//这里载入图片数据到纹理
+		/*第1个参数指定了纹理目标(Target)，设置为GL_TEXTURE_2D意味着会生成与当前绑定的纹理对象在同一个目标上的纹理（任何绑定到GL_TEXTURE_1D和GL_TEXTURE_3D的纹理不会受到影响）
+		  第2个参数为纹理指定多级渐远纹理的级别，如果你希望单独手动设置每个多级渐远纹理的级别的话，这里我们填0，也就是基本级别
+		  第3个参数告诉OpenGL我们希望把纹理储存为何种格式，载入的图像只有RGB值，因此也把纹理储存为RGB值
+		  第4个和第5个参数设置最终的纹理的宽度和高度，之前加载图像的时候储存了它们，所以使用对应的变量
+		  下个参数应该总是被设为0（历史遗留的问题）
+		  第7第8个参数定义了源图的格式和数据类型，使用RGB值加载这个图像，并把它们储存为char(byte)数组，将会传入对应值
+		  最后一个参数是真正的图像数据*/
+		  //当调用glTexImage2D时，当前绑定的纹理对象就会被附加上纹理图像
+		  //目前只有基本级别(Base-level)的纹理图像被加载了，如果要使用多级渐远纹理，我们必须手动设置所有不同的图像（不断递增第二个参数）
+		  //或者，直接在生成纹理之后调用glGenerateMipmap
+		glTexImage2D(GL_TEXTURE_2D, 0, interFormat, width, height, 0, format, GL_UNSIGNED_BYTE, textureData);
+
+		//这会为当前绑定的纹理自动生成所有需要的多级渐远纹理
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
 	else
@@ -474,5 +596,6 @@ void loadTexture(unsigned int* texture)
 		std::cout << "Failed to load texture" << std::endl;
 	}
 
+	//释放内存
 	stbi_image_free(textureData);
 }
