@@ -26,9 +26,19 @@
     <ClInclude Include="CustomShader.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="vertx.txt" />
     <Text Include="frag.txt" />
+    <Text Include="fragmentTexture.txt" />
+    <Text Include="vertexTexture.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="container.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
   </ItemGroup>
 </Project>

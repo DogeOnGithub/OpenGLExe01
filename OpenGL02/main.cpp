@@ -2,10 +2,13 @@
 
 #define GLEW_STATIC
 
+#define STB_IMAGE_IMPLEMENTATION
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include "CustomShader.h"
+#include "stb_image.h"
 
 int openGLTest01();
 
@@ -13,7 +16,11 @@ int openGLTest02();
 
 int openGLTest03();
 
+int openGLTest04();
+
 void processInput(GLFWwindow* window);
+
+void loadTexture(unsigned int* texture);
 
 float vertices[] = {
 	-0.5f, -0.5f, 0.0f,
@@ -33,6 +40,19 @@ float vertices2[] = {
 unsigned int indices[] = {
 	0, 1, 2,
 	1, 3, 2
+};
+
+float verticesTexture[] = {
+	//     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
+		 0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
+		 0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
+		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
+};
+
+float indicesTexture[] = {
+	0, 1, 3,
+	1, 2, 3
 };
 
 const char* vertexShaderSource =
@@ -76,7 +96,7 @@ const char* fragmentShaderSource2 =
 int main()
 {
 
-	return openGLTest03();
+	return openGLTest04();
 
 }
 
@@ -343,10 +363,116 @@ int openGLTest03()
 	return 0;
 }
 
+int openGLTest04()
+{
+	glfwInit();
+
+	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL02", NULL, NULL);
+
+	if (window == NULL)
+	{
+		std::cout << "error create" << std::endl;
+		glfwTerminate();
+		system("pause");
+		return -1;
+	}
+
+	glfwMakeContextCurrent(window);
+
+	glewExperimental = GL_TRUE;
+
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "glew init fail" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+
+	glViewport(0, 0, 800, 600);
+
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	unsigned int VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verticesTexture), verticesTexture, GL_STATIC_DRAW);
+
+	//创建索引缓冲对象
+	unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesTexture), indicesTexture, GL_STATIC_DRAW);
+
+	//创建Shader
+	CustomShader* shader = new CustomShader("vertx.txt", "frag.txt");
+
+	//创建Texture
+	/*unsigned int texture;
+	loadTexture(&texture);*/
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	while (!glfwWindowShouldClose(window))
+	{
+		processInput(window);
+
+		glClearColor(0, 0.2f, 0.2f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+
+		glBindVertexArray(VAO);
+		shader->use();
+		//glBindTexture(GL_TEXTURE_2D, texture);
+
+		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	glfwTerminate();
+	return 0;
+}
+
 void processInput(GLFWwindow * window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE))
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+}
+
+void loadTexture(unsigned int* texture)
+{
+	glGenTextures(1, texture);
+	glBindTexture(GL_TEXTURE_2D, *texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int width, height, nrChannels;
+	unsigned char* textureData = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+	if (textureData)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+
+	stbi_image_free(textureData);
 }
