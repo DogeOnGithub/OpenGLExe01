@@ -141,6 +141,7 @@
   <ItemGroup>
     <Text Include="frag.txt" />
     <Text Include="fragmentTexture.txt" />
+    <Text Include="threedVertex.txt" />
     <Text Include="vertexTexture.txt" />
     <Text Include="vertexTransform.txt" />
     <Text Include="vertx.txt" />

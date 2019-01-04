@@ -36,6 +36,7 @@
     <Text Include="fragmentTexture.txt" />
     <Text Include="vertexTexture.txt" />
     <Text Include="vertexTransform.txt" />
+    <Text Include="threedVertex.txt" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="container.jpg">
