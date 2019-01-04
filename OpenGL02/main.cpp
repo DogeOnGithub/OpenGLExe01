@@ -30,6 +30,8 @@ int openGLTest07();
 
 int openGLTest08();
 
+int openGLTest09();
+
 void processInput(GLFWwindow* window);
 
 void loadTexture(unsigned int* texture, const char* path, GLint interFormat, GLenum format);
@@ -152,7 +154,7 @@ const char* fragmentShaderSource2 =
 int main()
 {
 
-	return openGLTest08();
+	return openGLTest09();
 
 }
 
@@ -951,6 +953,141 @@ int openGLTest08()
 
 		glClearColor(0, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		glm::mat4 model;
+		model = glm::rotate(model, glm::radians(50.0f) * (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+
+		//第一个参数指定绘制的模式，第二个参数指定绘制的顶点数，第三个参数指定索引的类型，最有一个指定EBO中的偏移量
+		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+	glfwTerminate();
+	return 0;
+}
+
+//开启深度测试
+int openGLTest09()
+{
+	glfwInit();
+
+	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL02", NULL, NULL);
+
+	if (window == NULL)
+	{
+		std::cout << "error create" << std::endl;
+		glfwTerminate();
+		system("pause");
+		return -1;
+	}
+
+	glfwMakeContextCurrent(window);
+
+	glewExperimental = GL_TRUE;
+
+	if (glewInit() != GLEW_OK)
+	{
+		std::cout << "glew init fail" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+
+	glViewport(0, 0, 800, 600);
+
+	//开启深度测试
+	glEnable(GL_DEPTH_TEST);
+
+	unsigned int VAO;
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	unsigned int VBO;
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices3d), vertices3d, GL_STATIC_DRAW);
+
+	//创建索引缓冲对象
+	/*unsigned int EBO;
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesTexture), indicesTexture, GL_STATIC_DRAW);*/
+
+	//创建Shader
+	CustomShader* shader = new CustomShader("threedVertex.txt", "fragmentTexture.txt");
+
+	//创建Texture
+	unsigned int texture;
+	loadTexture(&texture, "container.jpg", GL_RGB, GL_RGB);
+
+	unsigned int textureFace;
+	loadTexture(&textureFace, "awesomeface.png", GL_RGBA, GL_RGBA);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	//应用纹理，这里使用顶点属性定义uv值的取样
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindVertexArray(VAO);
+	shader->use();
+
+	//激活第0个纹理单元，默认激活第0个
+	glActiveTexture(GL_TEXTURE0);
+	//绑定纹理，第一个参数指定绑定的纹理的类型，第二个参数是纹理的id，会自动把纹理赋值给片段着色器的采样器
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, textureFace);
+
+	//这个是设置sampler采样器的纹理单元，也就是可以将一个指定的Texture Unit绑定到指定的Uniform采样器
+	glUniform1i(glGetUniformLocation(shader->ProgramID, "textureWood"), 0);  //手动设置，将纹理单元0绑定到名为textureWood的采样器
+	shader->setInt("textureFace", 1);  //使用自定义的Shader类中的函数设置
+
+	//设置transform
+	glm::mat4 trans;  //单位矩阵
+	trans = glm::translate(trans, glm::vec3(0.5f, 0.0f, 0.0f));  //构建位移矩阵，第一个参数是单位矩阵，第二个是位移
+	trans = glm::rotate(trans, glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));  //构建旋转矩阵，需要注意的是，在组合矩阵的时候，向量是最先和最右边的矩阵相乘的，也就是说到这里为止，会先旋转，再位移
+
+	glm::mat4 model;
+	model = trans;  //构建模型矩阵
+
+	glm::mat4 view;
+	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));  //OpenGL中使用右手坐标系，在观察矩阵中，将场景往后移动3个单位，因为一开始，我们将是位于世界原点的
+
+	glm::mat4 projection;
+	//第1个参数是fov，也就是视野大小，正常视觉指定为45，第2个参数是视图的宽高比，第3个参数是near距离，第4个参数是far距离
+	projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);  //创建透视投影矩阵
+
+	//获取Uniform的位置值
+	unsigned int transformLocation = glGetUniformLocation(shader->ProgramID, "transform");
+	unsigned int modelLocation = glGetUniformLocation(shader->ProgramID, "model");
+	unsigned int viewLocation = glGetUniformLocation(shader->ProgramID, "view");
+	unsigned int projectionLocation = glGetUniformLocation(shader->ProgramID, "projection");
+
+	//第1个参数是uniform的位置值
+	//第2个参数是告诉OpenGL将要发送多少个矩阵
+	//第3个参数询问是否希望对矩阵进行置换(Transpose)，也就是说交换我们矩阵的行和列
+	//OpenGL开发者通常使用一种内部矩阵布局，叫做列主序(Column-major Ordering)布局，GLM的默认布局就是列主序，所以并不需要置换矩阵，所以填GL_FALSE
+	//第4个参数就是真正的矩阵数据，但是GLM并不是把它们的矩阵储存为OpenGL所希望接受的那种，因此要先用GLM的自带的函数value_ptr来变换这些数据
+	glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(trans));
+
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+
+	while (!glfwWindowShouldClose(window))
+	{
+		processInput(window);
+
+		glClearColor(0, 0.2f, 0.2f, 1.0f);
+		//因为使用了深度测试，因此在每次渲染迭代之前清楚深度缓冲，否则前一帧的深度信息仍然保存在缓冲中
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glm::mat4 model;
 		model = glm::rotate(model, glm::radians(50.0f) * (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
